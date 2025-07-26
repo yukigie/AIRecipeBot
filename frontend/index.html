@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Recipe Generator</title>
+</head>
+<body>
+  <h2>Enter Available Ingredients</h2>
+  <input type="text" id="ingredients" placeholder="e.g., chicken,tomato,onion">
+  <button onclick="getRecipe()">Get Recipe</button>
+
+  <pre id="output"></pre>
+
+  <script>
+  async function getRecipe() {
+    const ingredients = document.getElementById("ingredients").value;
+    const responseElement = document.getElementById("output");
+
+    try {
+      const response = await fetch('https://39pc9eej6l.execute-api.us-west-2.amazonaws.com/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ingredients })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch from Lambda');
+      }
+
+      const data = await response.json();
+      responseElement.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      responseElement.textContent = "Error: " + error.message;
+    }
+  }
+</script>
+
+</body>
+</html>

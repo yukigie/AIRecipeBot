@@ -1,0 +1,50 @@
+import boto3
+import json
+import uuid
+from datetime import datetime
+
+s3 = boto3.client("s3")
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+BUCKET_NAME = "ai-recipe-bucket"  # Change to your S3 bucket
+FOLDER_NAME = "bedrock_responses/"  # Your Q Business sync path
+
+def lambda_handler(event, context):
+    prompt = event.get("prompt", "Suggest a pasta dish")
+
+    body = {
+        "prompt": f"\n\nHuman: {prompt}\n\nAssistant:",
+        "max_tokens_to_sample": 300,
+        "temperature": 0.7,
+        "top_k": 250,
+        "top_p": 1.0,
+        "stop_sequences": ["\n\nHuman:"]
+    }
+
+    response = bedrock.invoke_model(
+        modelId="anthropic.claude-v2",  # Or titan model
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json"
+    )
+
+    result = json.loads(response['body'].read())
+    answer = result['completion']
+
+    # Save to S3
+    filename = f"{FOLDER_NAME}{uuid.uuid4()}.json"
+    s3.put_object(
+        Bucket=BUCKET_NAME,
+        Key=filename,
+        Body=json.dumps({
+            "prompt": prompt,
+            "response": answer,
+            "timestamp": datetime.utcnow().isoformat()
+        }),
+        ContentType="application/json"
+    )
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'message': 'Saved to S3', 'answer': answer})
+    }
